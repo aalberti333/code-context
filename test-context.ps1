@@ -10,8 +10,28 @@ New-Item -ItemType Directory -Path $tempPath | Out-Null # Create a temporary dir
 
 Start-Job -ScriptBlock {
     try {
-        # Extract to temporary directory
-        [System.IO.Compression.ZipFile]::ExtractToDirectory($using:zipFile, $using:tempPath)
+        $zip = [System.IO.Compression.ZipFile]::OpenRead($using:zipFile)
+        foreach ($entry in $zip.Entries) {
+            $targetPath = Join-Path $using:tempPath $entry.FullName
+            $directoryPath = [System.IO.Path]::GetDirectoryName($targetPath)
+            
+            # Ensure the directory exists
+            if (!(Test-Path $directoryPath)) {
+                New-Item -ItemType Directory -Path $directoryPath -Force | Out-Null
+            }
+            
+            # Extract and overwrite the file
+            $fileStream = [System.IO.File]::Create($targetPath)
+            try {
+                $entryStream = $entry.Open()
+                $entryStream.CopyTo($fileStream)
+            }
+            finally {
+                $fileStream.Dispose()
+                $entryStream.Dispose()
+            }
+        }
+        $zip.Dispose()
 
         # Replace the contents of the destination path with the temp directory contents
         Remove-Item -Path "$using:destinationPath\*" -Recurse -Force -ErrorAction SilentlyContinue
@@ -24,6 +44,3 @@ Start-Job -ScriptBlock {
         Remove-Item -Path $using:tempPath -Recurse -Force
     }
 }
-
-# Optionally, wait for the job to finish and output any result
-# Get-Job | Wait-Job | Receive-Job
