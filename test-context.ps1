@@ -44,3 +44,11 @@ Start-Job -ScriptBlock {
         Remove-Item -Path $using:tempPath -Recurse -Force
     }
 }
+
+$7zipPath = "C:\Program Files\7-Zip\7z.exe" # Adjust path if necessary
+$zipFile = "$currentDirectory\file.zip"
+$extractTo = "$destinationPath\my-location"
+
+Start-Job -ScriptBlock {
+    & $using:7zipPath x $using:zipFile "-o$using:extractTo" -aoa
+}
