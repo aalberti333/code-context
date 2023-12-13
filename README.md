@@ -31,9 +31,19 @@ def update_rainbows(existing_doc, new_tree):
             update_books(existing_doc, new_tree, new_rainbow)
 
 def update_books(existing_doc, new_tree, new_rainbow):
-    for new_book in new_rainbow['books']:
-        collection.update_one(
-            {'ducks': existing_doc['ducks'], 'trees.tree': new_tree['tree'], 'trees.rainbows.rainbow_id': new_rainbow['rainbow_id']},
-            {'$push': {'trees.$.rainbows.$.books': new_book}}
-        )
+    # Find the index of the specific tree in the 'trees' array
+    tree_index = next((i for i, tree in enumerate(existing_doc['trees']) if tree['tree'] == new_tree['tree']), None)
+
+    # Find the index of the specific rainbow in the 'rainbows' array of the found tree
+    if tree_index is not None:
+        rainbow_index = next((i for i, rainbow in enumerate(existing_doc['trees'][tree_index]['rainbows']) if rainbow['rainbow_id'] == new_rainbow['rainbow_id']), None)
+
+        if rainbow_index is not None:
+            for new_book in new_rainbow['books']:
+                # Construct the update path with the found indices
+                update_path = f'trees.{tree_index}.rainbows.{rainbow_index}.books'
+                collection.update_one(
+                    {'_id': existing_doc['_id']},
+                    {'$push': {update_path: new_book}}
+                )
 ```
